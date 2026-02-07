@@ -118,7 +118,6 @@ async function getMeets(req, res) {
         $ne: userObjectId,
         $nin: seenUserIds,
       },
-      onboardingComplete: true,
     };
 
     // Фильтр по предпочтениям (опционально)
