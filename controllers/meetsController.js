@@ -118,6 +118,7 @@ async function getMeets(req, res) {
         $ne: userObjectId,
         $nin: seenUserIds,
       },
+      onboardingComplete: true, // только пользователи завершившие регистрацию
     };
 
     // Фильтр по предпочтениям (опционально)
