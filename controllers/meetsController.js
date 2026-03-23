@@ -69,6 +69,10 @@ async function enrichUserWithPhotos(user) {
         if (photo && typeof photo === 'object' && photo.key) {
           return await getGetObjectUrl(photo.key);
         }
+        // Если объект имеет url (прямая ссылка без S3 key)
+        if (photo && typeof photo === 'object' && photo.url && photo.url.startsWith('http')) {
+          return photo.url;
+        }
         if (typeof photo === 'string' && photo.length > 0) {
           if (photo.startsWith('http')) {
             return photo;
