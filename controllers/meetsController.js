@@ -122,18 +122,56 @@ async function getMeets(req, res) {
         $ne: userObjectId,
         $nin: seenUserIds,
       },
-      onboardingComplete: true, // только пользователи завершившие регистрацию
+      onboardingComplete: true,
     };
 
-    // Фильтр по предпочтениям (опционально)
-    // if (currentUser.wishUser && currentUser.wishUser !== 'all') {
-    //   filter['gender.id'] = currentUser.wishUser;
-    // }
+    const q = req.query;
+
+    if (q.lookingFor && q.lookingFor !== 'any') filter['gender.id'] = q.lookingFor;
+    if (q.ageMin || q.ageMax) {
+      filter.age = {};
+      if (q.ageMin) filter.age.$gte = Number(q.ageMin);
+      if (q.ageMax) filter.age.$lte = Number(q.ageMax);
+    }
+    if (q.online === 'true') filter.isOnline = true;
+    if (q.orientation) filter.userSex = q.orientation;
+    if (q.goals) {
+      const goalsList = q.goals.split(',').filter(Boolean);
+      if (goalsList.length > 0) filter['lookingFor.id'] = { $in: goalsList };
+    }
+    if (q.zodiac) filter.zodiac = q.zodiac;
+    if (q.languages) {
+      const langList = q.languages.split(',').filter(Boolean);
+      if (langList.length > 0) filter.languages = { $in: langList };
+    }
+    if (q.children) filter.children = q.children;
+    if (q.pets) {
+      const petsList = q.pets.split(',').filter(Boolean);
+      if (petsList.length > 0) filter.pets = { $in: petsList };
+    }
+    if (q.smoking) filter.smoking = q.smoking;
+    if (q.alcohol) filter.alcohol = q.alcohol;
+    if (q.relationship) filter.relationship = q.relationship;
+    if (q.education) filter.education = q.education;
+
+    const hasActiveFilters = q.lookingFor || q.ageMin || q.ageMax || q.online || q.orientation ||
+      q.goals || q.zodiac || q.languages || q.children || q.pets || q.smoking || q.alcohol ||
+      q.relationship || q.education;
+    const isStrict = q.strict === 'true';
 
     // Получаем пользователей
-    const users = await User.find(filter)
+    let users = await User.find(filter)
       .limit(limit)
       .lean();
+
+    // Fallback без фильтров если ничего не найдено и не strict
+    if (users.length === 0 && hasActiveFilters && !isStrict) {
+      const fallbackFilter = {
+        _id: { $ne: userObjectId, $nin: seenUserIds },
+        onboardingComplete: true,
+      };
+      users = await User.find(fallbackFilter).limit(limit).lean();
+    }
 
     // Обогащаем фотографиями
     const enrichedUsers = await Promise.all(
