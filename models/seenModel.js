@@ -1,4 +1,5 @@
-const mongoose = require('../src/db');
+const mongoose = require('mongoose');
+const { meetsConn } = require('../src/db');
 
 // Модель для отслеживания просмотренных пользователей
 const seenSchema = new mongoose.Schema({
@@ -34,6 +35,6 @@ const seenSchema = new mongoose.Schema({
 // Уникальный индекс - один просмотр от пользователя к пользователю
 seenSchema.index({ userId: 1, seenUserId: 1 }, { unique: true });
 
-const Seen = mongoose.models.Seen || mongoose.model('Seen', seenSchema);
+const Seen = meetsConn.models.Seen || meetsConn.model('Seen', seenSchema);
 
 module.exports = Seen;
