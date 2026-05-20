@@ -4,6 +4,7 @@ const Seen = require('../models/seenModel');
 
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const { buildLocationPattern } = require('../src/locationParser');
 
 const REGION = process.env.AWS_REGION || 'eu-central-1';
 const BUCKET = process.env.S3_BUCKET || 'molo-user-photos';
@@ -154,33 +155,19 @@ async function getMeets(req, res) {
     if (q.relationship) filter.relationship = q.relationship;
     if (q.education) filter.education = q.education;
 
-    const hasActiveFilters = q.lookingFor || q.ageMin || q.ageMax || q.online || q.orientation ||
-      q.goals || q.zodiac || q.languages || q.children || q.pets || q.smoking || q.alcohol ||
-      q.relationship || q.education;
-    const isStrict = q.strict === 'true';
-
-    // Получаем пользователей
-    let users = await User.find(filter)
-      .limit(limit)
-      .lean();
-
-    // Fallback без фильтров если ничего не найдено и не strict
-    if (users.length === 0 && hasActiveFilters && !isStrict) {
-      const fallbackFilter = {
-        _id: { $ne: userObjectId, $nin: seenUserIds },
-        onboardingComplete: true,
-      };
-      users = await User.find(fallbackFilter).limit(limit).lean();
+    const expansionLevel = parseInt(q.expansionLevel) || 0;
+    if (q.location) {
+      const pattern = buildLocationPattern(q.location, expansionLevel);
+      if (pattern) filter.userLocation = { $regex: pattern, $options: 'i' };
     }
 
-    // Обогащаем фотографиями
-    const enrichedUsers = await Promise.all(
-      users.map(enrichUserWithPhotos)
-    );
+    const users = await User.find(filter).limit(limit).lean();
 
-    console.log(`[meets] getMeets for user ${userId}: found ${enrichedUsers.length}`);
+    const enrichedUsers = await Promise.all(users.map(enrichUserWithPhotos));
 
-    return res.json({ users: enrichedUsers });
+    console.log(`[meets] getMeets for user ${userId}: found ${enrichedUsers.length}, expansionLevel=${expansionLevel}`);
+
+    return res.json({ users: enrichedUsers, expansionLevel });
   } catch (e) {
     console.error('[meets] getMeets error:', e);
     return res.status(500).json({ message: 'Server error' });
