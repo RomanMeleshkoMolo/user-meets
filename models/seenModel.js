@@ -34,6 +34,8 @@ const seenSchema = new mongoose.Schema({
 
 // Уникальный индекс - один просмотр от пользователя к пользователю
 seenSchema.index({ userId: 1, seenUserId: 1 }, { unique: true });
+// Автоудаление через 30 дней
+seenSchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 3600 });
 
 const Seen = meetsConn.models.Seen || meetsConn.model('Seen', seenSchema);
 
