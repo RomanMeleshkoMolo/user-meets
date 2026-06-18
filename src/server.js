@@ -14,8 +14,16 @@ const meetsRoutes = require('../routes/meets');
 const app = express();
 const PORT = process.env.PORT || 9000;
 
+app.set('trust proxy', 1);
 app.use(helmet());
-app.use(cors({ origin: '*' }));
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    const allowed = (process.env.CORS_ORIGINS || '').split(',').filter(Boolean);
+    if (allowed.length === 0 || allowed.includes(origin)) return cb(null, true);
+    cb(new Error('CORS not allowed'));
+  },
+}));
 app.use(bodyParser.json({ limit: '1mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '1mb' }));
 app.use(mongoSanitize());
