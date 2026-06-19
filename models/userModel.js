@@ -39,6 +39,8 @@ const userSchema = new mongoose.Schema({
   smoking: { type: String, default: '' },
   alcohol: { type: String, default: '' },
   relationship: { type: String, default: '' },
+  premium: { type: Boolean, default: false },
+  premiumUntil: { type: Date, default: null },
   isOnline: { type: Boolean, default: false },
   lastSeen: { type: Date, default: null },
   onboardingComplete: { type: Boolean, default: false },
